@@ -1,0 +1,11 @@
+{
+	"id": "places-valhalla",
+	"name": "Places - Valhalla",
+	"version": "0.0.1",
+	"minAppVersion": "1.13.0",
+	"description": "Valhalla provider for Places, with elevation, directions, isochrones, track matching, and track snapping.",
+	"author": "Bob Stanton",
+	"authorUrl": "https://github.com/bobstanton",
+	"fundingUrl": "https://ko-fi.com/bobsoftware",
+	"isDesktopOnly": false
+}
