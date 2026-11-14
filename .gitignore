@@ -1,24 +1,17 @@
-# vscode
-.vscode
+node_modules/
+*.tsbuildinfo
+coverage/
+.eslintcache
+*.log
 
-# Intellij
-*.iml
-.idea
-
-# npm
-node_modules
-
-# build output
+/dist/**
+!/dist/**/
+!/dist/**/*.d.ts
 /main.js
 /main.css
 /styles.css
 *.map
-
-# TypeScript incremental build cache
-*.tsbuildinfo
-
-# obsidian
-data.json
-
-# Exclude macOS Finder (System Explorer) View States
-.DS_Store
+/data.json
+/types/
+/*renderers.mjs
+/*renderers.css

@@ -61,7 +61,7 @@ jobs:
         run: npm run typecheck
 
       - name: Build plugin
-        run: npm run build --if-present
+        run: npm run bundle
 
       - name: Check release assets
         run: |

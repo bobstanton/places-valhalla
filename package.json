@@ -1,34 +1,69 @@
 {
   "name": "places-valhalla",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Valhalla provider for Places, with elevation, directions, isochrones, track matching, and track snapping.",
   "main": "main.js",
   "scripts": {
-    "lint": "eslint src --ext .ts,.tsx,.js,.jsx",
-    "dev": "node esbuild.config.mjs",
-    "build": "node esbuild.config.mjs production",
+    "lint": "eslint src package.json manifest.json versions.json",
+    "dev": "npm run dev:core && npm run dev:plugin",
+    "build": "npm run typecheck && npm run bundle",
     "typecheck": "tsc --noEmit --pretty false --skipLibCheck",
     "version": "node version-bump.mjs && git add manifest.json versions.json",
-    "watch": "node esbuild.config.mjs watch"
+    "watch": "npm run dev:core && node esbuild.config.mjs watch",
+    "bundle": "npm run build:core && npm run bundle:plugin",
+    "build:core": "tsc -p tsconfig.core.json && node esbuild.core.mjs production",
+    "dev:core": "tsc -p tsconfig.core.json && node esbuild.core.mjs",
+    "watch:core": "node esbuild.core.mjs watch",
+    "prepare": "node --input-type=module -e \"import { hasBuiltExports } from './esbuild.library.mjs'; process.exit(hasBuiltExports() ? 0 : 1)\" || npm run build:core",
+    "bundle:plugin": "node esbuild.config.mjs production",
+    "dev:plugin": "node esbuild.config.mjs",
+    "format": "node ../../vaultquery-tests/scripts/lint.mjs --format-only --repo . --fix",
+    "format:check": "node ../../vaultquery-tests/scripts/lint.mjs --format-only --repo ."
   },
   "author": "Bob Stanton",
   "license": "AGPL-3.0-only",
   "devDependencies": {
+    "@eslint/js": "^9.39.5",
+    "@eslint/json": "^2.1.1",
     "@googlemaps/polyline-codec": "^1.0.28",
     "@types/geojson": "^7946.0.16",
-    "@types/node": "^26.1.1",
-    "@typescript-eslint/eslint-plugin": "^8.63.0",
-    "@typescript-eslint/parser": "^8.63.0",
-    "esbuild": "^0.28.1",
-    "eslint": "^8.57.1",
-    "obsidian": "^1.13.1",
-    "tslib": "2.8.1",
-    "typescript": "6.0.3"
+    "@types/node": "^26.6.6",
+    "@typescript-eslint/parser": "^8.72.2",
+    "esbuild": "^0.28.2",
+    "eslint": "^9.39.5",
+    "eslint-plugin-obsidianmd": "^0.5.1",
+    "obsidian": "1.14.4",
+    "tslib": "2.9.1",
+    "typescript": "6.0.3",
+    "typescript-eslint": "^8.72.2"
   },
   "dependencies": {
-    "places-shared": "git+https://github.com/bobstanton/places-shared.git#0.0.1"
+    "places-shared": "git+https://github.com/bobstanton/places-shared.git#0.0.2",
+    "@googlemaps/polyline-codec": "^1.0.28",
+    "@types/geojson": "^7946.0.16"
   },
   "overrides": {
-    "typescript": "6.0.3"
-  }
+    "typescript": "6.0.3",
+    "obsidian": "1.14.4",
+    "@codemirror/state": "6.7.6",
+    "@codemirror/view": "6.43.15"
+  },
+  "exports": {
+    "./core": {
+      "types": "./dist/core/index.d.ts",
+      "import": "./dist/core/index.js",
+      "require": "./dist/core/index.cjs",
+      "default": "./dist/core/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "src",
+    "types",
+    "main.js",
+    "styles.css",
+    "*.mjs",
+    "*.json",
+    "globals.d.ts"
+  ]
 }

@@ -2,7 +2,7 @@ import esbuild from "esbuild";
 import process from "process";
 import { builtinModules, createRequire } from "node:module";
 import { promises as fs } from "fs";
-import { join } from "path";
+import { dirname, join } from "path";
 
 export const prod = process.argv[2] === "production";
 export const watchMode = process.argv[2] === "watch";
@@ -76,31 +76,21 @@ export function createPluginBuildOptions(options = {}) {
 
 export async function runPluginBuild(options = {}) {
   const context = await esbuild.context(createPluginBuildOptions(options));
+
   if (watchMode) {
     await context.watch();
+
     return;
   }
+
   await context.rebuild();
   process.exit(0);
 }
 
-/**
- * maplibre-gl 6 loads its worker from a URL rather than an inline blob, which a
- * bundled, server-less Obsidian plugin can't provide. This pre-bundles the calling
- * package's nested maplibre-gl 6 worker (with its shared chunk) into one
- * self-contained ES module and exposes its source under the `maplibre-worker-bundle`
- * import; the provider serves it via a blob URL at runtime with installMaplibreWorker.
- * Only maplibre-gl 6 providers need this. Usage:
- *   runPluginBuild({ plugins: [await createMaplibreWorkerInlinePlugin()] })
- */
 export async function createMaplibreWorkerInlinePlugin() {
+  const require = createRequire(import.meta.url);
   const workerBuild = await esbuild.build({
-    // Resolved rather than spelled out: npm hoists maplibre-gl to the workspace
-    // root when a plugin's version is the common one, and nests it when the
-    // plugin pins a different major. A literal node_modules path finds only the
-    // nested case. This file is vendored into each package, so resolution starts
-    // from that package and picks up whichever copy it actually builds against.
-    entryPoints: [createRequire(import.meta.url).resolve("maplibre-gl/dist/maplibre-gl-worker.mjs")],
+    entryPoints: [require.resolve("maplibre-gl/dist/maplibre-gl-worker.mjs")],
     bundle: true,
     format: "esm",
     minify: true,
@@ -108,6 +98,7 @@ export async function createMaplibreWorkerInlinePlugin() {
     write: false,
   });
   const workerCode = workerBuild.outputFiles[0].text;
+
   return {
     name: "maplibre-worker-inline",
     setup(build) {

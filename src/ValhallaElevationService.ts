@@ -32,10 +32,12 @@ export class ValhallaElevationService extends ElevationServiceBase {
     if (!Array.isArray(response.height) || response.height.length !== coordinates.length) {
       throw new Error("Valhalla returned an unexpected elevation response.");
     }
+
     return response.height.map((height, index) => {
       if (height === null || !Number.isFinite(height)) {
         throw new Error(`Valhalla returned no elevation for point ${index + 1}.`);
       }
+
       return meters(height);
     });
   }

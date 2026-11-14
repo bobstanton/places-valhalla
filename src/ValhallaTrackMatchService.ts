@@ -1,13 +1,6 @@
 import type { Coordinate } from "places-shared/geo";
 import type { IPlaceExtensionSettings } from "places-shared/settings";
-import {
-  type ITrackMatchService,
-  type TrackMatchOptions,
-  type TrackMatchResult,
-  aggregateTraceEdges,
-  downsampleTrackForTrace,
-  VALHALLA_TRACE_EDGE_ATTRIBUTES,
-} from "places-shared/services";
+import { type ITrackMatchService, type TrackMatchOptions, type TrackMatchResult, aggregateTraceEdges, downsampleTrackForTrace, VALHALLA_TRACE_EDGE_ATTRIBUTES } from "places-shared/services";
 import { km } from "places-shared/units";
 import { PolylineCodec } from "places-shared/track";
 import { logger } from "places-shared/utils";
@@ -61,8 +54,10 @@ export class ValhallaTrackMatchService implements ITrackMatchService {
     }, `${options?.costing ?? "pedestrian"}, ${shape.length} points`) as TraceAttributesResponse;
 
     const edges = response.edges ?? [];
+
     logger.scope("Valhalla").debug(`trace_attributes matched ${edges.length} edges from ${shape.length} shape points`);
     const matchedShape = response.shape ? PolylineCodec.decode(response.shape, 6) : undefined;
+
     return aggregateTraceEdges(edges, this.providerId, shape.length, matchedShape);
   }
 }
