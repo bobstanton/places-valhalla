@@ -2,6 +2,8 @@
 
 Routing provider for [Places](https://community.obsidian.md/plugins/places) using [Valhalla](https://github.com/valhalla/valhalla/), with directions, isochrones, elevation replacement, track snapping, and track matching.
 
+This is not a stand-alone plugin, to use, install along side [Places](https://community.obsidian.md/plugins/places). Refer to the [sandbox](https://sandbox.obsidian.stanton.dev/places/) for examples.
+
 ## Network requests
 
 | Area           | Request                                             |

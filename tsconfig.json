@@ -18,7 +18,12 @@
       "DOM.Iterable",
       "ES2020"
     ],
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "paths": {
+      "places-valhalla/core": [
+        "./src/core/index.ts"
+      ]
+    }
   },
   "include": [
     "**/*.ts",

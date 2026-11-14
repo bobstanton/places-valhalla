@@ -1,16 +1,8 @@
 import type { IPlaceExtensionSettings } from "places-shared/settings";
-import {
-  type ISnapService,
-  type SnapRequest,
-  type SnapResult,
-  buildValhallaTraceBody,
-  describeUnsupportedSnapOptions,
-  toSnapResult,
-  type ValhallaTraceEdge,
-} from "places-shared/services";
+import { type ISnapService, type SnapRequest, type SnapResult, buildValhallaTraceBody, describeUnsupportedSnapOptions, toSnapResult, type ValhallaTraceEdge } from "places-shared/services";
 import { ValhallaClient } from "./ValhallaClient";
 
-const VALHALLA_COSTINGS = { walk: "pedestrian", bike: "bicycle", drive: "auto" } as const;
+import { VALHALLA_COSTINGS } from 'places-valhalla/core';
 
 // Valhalla accepts everything except Mapbox's own two options.
 const VALHALLA_SNAP_SUPPORT = { costing: true, costingOptions: true, timestamps: true, shapeMatch: true, traceOptions: true, attributes: true } as const;

@@ -2,7 +2,7 @@ import esbuild from "esbuild";
 import process from "process";
 import { builtinModules, createRequire } from "node:module";
 import { promises as fs } from "fs";
-import { join } from "path";
+import { dirname, join } from "path";
 
 export const prod = process.argv[2] === "production";
 export const watchMode = process.argv[2] === "watch";
@@ -76,31 +76,32 @@ export function createPluginBuildOptions(options = {}) {
 
 export async function runPluginBuild(options = {}) {
   const context = await esbuild.context(createPluginBuildOptions(options));
+
   if (watchMode) {
     await context.watch();
+
     return;
   }
+
   await context.rebuild();
   process.exit(0);
 }
 
-/**
- * maplibre-gl 6 loads its worker from a URL rather than an inline blob, which a
- * bundled, server-less Obsidian plugin can't provide. This pre-bundles the calling
- * package's nested maplibre-gl 6 worker (with its shared chunk) into one
- * self-contained ES module and exposes its source under the `maplibre-worker-bundle`
- * import; the provider serves it via a blob URL at runtime with installMaplibreWorker.
- * Only maplibre-gl 6 providers need this. Usage:
- *   runPluginBuild({ plugins: [await createMaplibreWorkerInlinePlugin()] })
- */
 export async function createMaplibreWorkerInlinePlugin() {
+  const require = createRequire(import.meta.url);
+  const { version } = require("maplibre-gl/package.json");
+  const patchParsing = version === "6.2.0";
   const workerBuild = await esbuild.build({
-    // Resolved rather than spelled out: npm hoists maplibre-gl to the workspace
-    // root when a plugin's version is the common one, and nests it when the
-    // plugin pins a different major. A literal node_modules path finds only the
-    // nested case. This file is vendored into each package, so resolution starts
-    // from that package and picks up whichever copy it actually builds against.
-    entryPoints: [createRequire(import.meta.url).resolve("maplibre-gl/dist/maplibre-gl-worker.mjs")],
+    entryPoints: [require.resolve(`maplibre-gl/dist/maplibre-gl-worker${patchParsing ? "-dev" : ""}.mjs`)],
+    plugins: patchParsing ? [{
+      name: "maplibre-worker-parsing-lifecycle",
+      setup(build) {
+        build.onLoad({ filter: /maplibre-gl-worker-dev\.mjs$/ }, async ({ path }) => ({
+          contents: patchMaplibreWorkerParsing(await fs.readFile(path, "utf8")),
+          loader: "js",
+        }));
+      },
+    }] : [],
     bundle: true,
     format: "esm",
     minify: true,
@@ -108,6 +109,7 @@ export async function createMaplibreWorkerInlinePlugin() {
     write: false,
   });
   const workerCode = workerBuild.outputFiles[0].text;
+
   return {
     name: "maplibre-worker-inline",
     setup(build) {
@@ -121,6 +123,38 @@ export async function createMaplibreWorkerInlinePlugin() {
       }));
     },
   };
+}
+
+// Aborting a MapLibre tile parse can discard raw data needed by a later parse.
+// Retain it until parsing succeeds.
+export function patchMaplibreWorkerParsing(source) {
+  const replace = (before, after, expected) => {
+    if (source.split(before).length - 1 !== expected) {
+      throw new Error("MapLibre 6.2.0 worker parsing patch no longer matches; review the worker lifecycle");
+    }
+
+    source = source.replaceAll(before, after);
+  };
+
+  replace(`\t\t\ttry {
+\t\t\t\treturn await this._parseWorkerTile(workerTile, params, parseState);
+\t\t\t} finally {
+\t\t\t\tthis.tileState.removeParsing(uid);
+\t\t\t}`, `\t\t\treturn await this._parseWorkerTile(workerTile, params);`, 4);
+  replace(`\t\t\tconst parseState = this.tileState.getParsing(uid);\n`, "", 2);
+  replace(`\t\t\tworkerTile.status = "done";\n`, "", 2);
+  replace(`\tasync _parseWorkerTile(workerTile, params, parseState) {`,
+    `\tasync _parseWorkerTile(workerTile, params) {\n\t\tconst parseState = this.tileState.getParsing(workerTile.uid);`, 2);
+  replace(`\t\treturn result;\n\t}\n\t_getExpiryData`,
+    `\t\tif (parseState && this.tileState.getParsing(workerTile.uid) === parseState) this.tileState.removeParsing(workerTile.uid);\n\t\treturn result;\n\t}\n\t_getExpiryData`, 1);
+  replace(`\t\treturn result;\n\t}\n\t/**\n\t* Implements {@link WorkerSource.abortTile}.`,
+    `\t\tif (parseState && this.tileState.getParsing(workerTile.uid) === parseState) this.tileState.removeParsing(workerTile.uid);\n\t\treturn result;\n\t}\n\t/**\n\t* Implements {@link WorkerSource.abortTile}.`, 1);
+  replace(`\tremoveLoaded(uid) {\n\t\tdelete this.loaded[uid];`,
+    `\tremoveLoaded(uid) {\n\t\tdelete this.parsing[uid];\n\t\tdelete this.loaded[uid];`, 1);
+  replace(`\tclearLoaded() {\n\t\tthis.loaded = {};`,
+    `\tclearLoaded() {\n\t\tthis.parsing = {};\n\t\tthis.loaded = {};`, 1);
+
+  return source;
 }
 
 export async function copyStylesIfPresent() {
